@@ -69,7 +69,10 @@ semicolon.
 
 ## Publication
 
-[Details to be filled here]
+If you use this code for a publication, please cite
+Kramer, C. Nonadditivity Analysis. J. Chem. Inf. Model. 2019, 59, 9, 4034–4042.
+
+https://pubs.acs.org/doi/10.1021/acs.jcim.9b00631
 
 
 -----------------
