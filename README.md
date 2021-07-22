@@ -154,6 +154,6 @@ links the two files above and can be used for examnple for visualizations in Spo
 
 ## Copyright
 
-The mmpdb package is copyright 2015-2017 by F. Hoffmann-La
-Roche Ltd and distributed under the 3-clause BSD license.
+The NonadditivityAnalysis code is copyright 2015-2019 by F. Hoffmann-La
+Roche Ltd and distributed under the 3-clause BSD license (see LICENSE.txt).
 
