@@ -42,11 +42,6 @@ from rdkit import RDConfig
 
 salt_defns = os.path.join(RDConfig.RDDataDir, "Salts.txt")  # replace if you have more specific definitions
 
-path_to_mmpdb = ""       # mandatory
-if path_to_mmpdb == "":
-    print("Please define path to mmpdb in the script on line 45.")
-    exit(0)
-
 font_path = "arial.ttf"   # Only used in draw_pics, currently not supported
 
 ########################
@@ -674,21 +669,22 @@ Generate MMP Indexing and Matching using mmpdb
     fragfile = infile[:infile.index(".")] + ".fragments"
     mmp_outfile = infile[:infile.index(".")] + "_mmp_raw.csv"
 
+    # TODO switch system calls to just importing the python code and using it directly
     if update:
         print("Updating MMP Fragments for " + infile)
-        sp_call = 'python ' + path_to_mmpdb + ' fragment ' \
+        sp_call = 'python -m mmpdblib fragment ' \
                   + ' --num-jobs 20 --delimiter tab --cache ' \
                   + fragfile + ' --output ' + fragfile + ' ' + smifile
     else:
         print("Generating MMP Fragments for " + infile)
-        sp_call = 'python '+ path_to_mmpdb + ' fragment' \
+        sp_call = 'python -m mmpdblib fragment' \
                   + ' --num-jobs 20 -i smi --delimiter tab ' \
                   + ' --max-rotatable-bonds 20 --output ' + fragfile + ' ' + smifile
 
     subprocess.call(sp_call, shell=True)        # Fragmentation
 
     print("Indexing MMP Fragments for " + infile)
-    sp_call = 'python '+ path_to_mmpdb + ' index'
+    sp_call = 'python -m mmpdblib index'
     sp_call = sp_call + ' --out csv --symmetric --output ' + mmp_outfile + ' ' + fragfile
     subprocess.call(sp_call, shell=True)        # Fragment_matching & Indexing
 
@@ -1049,61 +1045,3 @@ def run_nonadd_calculation(run_control):
                             series_column=run_control.series_column)
 
     exit(0)
-
-#################
-# The main code starts here
-
-parser = argparse.ArgumentParser(
-    description="Nonadditivity Analysis based on matched MMPs",
-    epilog="""
-INPUT FORMAT:\t Identifier [sep] SMILES [sep] data[...]
-""",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-#    formatter_class=RawDescriptionHelpFormatter)
-
-
-parser.add_argument("-in", required=True, dest="infile",
-                    help="Input file")
-parser.add_argument("-update", action="store_true",
-                    help="Use fragmentation and images from previous run")
-parser.add_argument("-max_heavy", type=int, default=70,
-                    help="Maximum number of heavy atoms per ligand")
-parser.add_argument("-no_chiral", action="store_true",
-                    help="Skip all transformations that include chiral centers")
-parser.add_argument("-delimiter", choices=["tab", "space", "comma", "semicolon"], default="tab",
-                    help="Specify delimiter in input file")
-parser.add_argument("-include_censored", action="store_true",
-                    help="Include Circles where one out of four compounds has a censored value")
-parser.add_argument("-out", default=None, dest="outfile",
-                    help="Output file name")
-parser.add_argument("-series_column", default=None,
-                    help="Column that identifies subseries within the dataset")
-parser.add_argument("-props", nargs='*', default=None,
-                    help="Property columns for which Nonadditivity should be calculated")
-parser.add_argument("-units", nargs='*', default=None,
-                    help="Unit of the activity given. Need to supply either none or as many as props. \
-                         Units need to be one out of M, mM, uM, nM, pM, noconv.")
-parser.add_argument("-shorts", nargs='*', default=None,
-                    help="Activity Abbreviations. Need to supply either none or as many as props.")
-
-# Legacy functions 
-#parser.add_argument("-write_images", action="store_true",
-#                    help="Write Nonadditivity circle images to ./images/ directory")
-
-
-args = parser.parse_args()
-args.write_images = False
-
-if args.shorts and args.props:
-    if not len(args.shorts) == len(args.props):
-        print("Please either supply no or exactly as many shortcut names as property columns")
-        print("Exiting.")
-        exit(0)
-    
-if args.units and args.props:
-    if not len(args.units) == len(args.props):
-        print("Please either supply no or exactly as many units as property columns")
-        print("Exiting.")
-        exit(0)
-
-run_nonadd_calculation(args)
