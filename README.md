@@ -10,55 +10,52 @@ A program to find key complex patterns in SAR data
 --------------------
 
 
-## Requirements
-
+## Installation
 
 The program has been tested on Python 3.6.
 
 You will need a copy of the RDKit cheminformatics toolkit, available
-from http://rdkit.org/ . 
+from http://rdkit.org/. The easiest way is to install via PyPI with
+`pip install rdkit-pypi`.
 
-You will need a running version of mmpdb, a matched molecular pairs
-database generation and analysis toolkit. This is available from
-http://github.com/rdkit/mmpdb
+Install directly from source with:
+
+```bash
+$ pip install git+https://github.com/KramerChristian/NonadditivityAnalysis.git
+```
+
+Install the code in development mode with:
+
+```bash
+$ git clone git+https://github.com/KramerChristian/NonadditivityAnalysis.git
+$ cd NonadditivityAnalysis
+$ pip install -e .
+```
 
 The path to mmpdb has to be set on line 44 of the Nonadditivity analysis 
 code. If a special salt clean-up is required, the path to the salt definitions
 can be set on line 43.
-
-Apart from this, only standard scientific python libraries like scipy and 
-numpy are required.
- 
-
--------------------
-
 
 ## How to run the program and get help
 
 The code runs as a simple command-line tool. Command line options are printed via
 
 ```shell
-   % python Nonadditivity_analysis.py -h
+$ python -m nonadditivity -h
 ```
-
-
--------------------
-
 
 ## Example usage
 
 Using the test files supplied, an example run can be
 
 ```shell
-   % python Nonadditivity_Analysis.py -i hERG_ChEMBL.txt -delimiter tab 
-     -series_column ASSAY_CHEMBLID -props PCHEMBL_VALUE -units nM
+$ python -m nonadditivity -in hERG_ChEMBL.txt -delimiter tab -series_column ASSAY_CHEMBLID -props PCHEMBL_VALUE -units nM
 ```
 
-
 #### Input file format
+
 IDENTIFIER [sep] SMILES	[sep] DATA
 ...
-
 
 where [sep] is the separator and can be chosen from tab, space, comma, and 
 semicolon.
