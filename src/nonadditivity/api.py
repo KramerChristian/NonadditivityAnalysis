@@ -42,11 +42,6 @@ from rdkit import RDConfig
 
 salt_defns = os.path.join(RDConfig.RDDataDir, "Salts.txt")  # replace if you have more specific definitions
 
-path_to_mmpdb = ""       # mandatory
-if path_to_mmpdb == "":
-    print("Please define path to mmpdb in the script on line 45.")
-    exit(0)
-
 font_path = "arial.ttf"   # Only used in draw_pics, currently not supported
 
 ########################
@@ -674,21 +669,22 @@ Generate MMP Indexing and Matching using mmpdb
     fragfile = infile[:infile.index(".")] + ".fragments"
     mmp_outfile = infile[:infile.index(".")] + "_mmp_raw.csv"
 
+    # TODO switch system calls to just importing the python code and using it directly
     if update:
         print("Updating MMP Fragments for " + infile)
-        sp_call = 'python ' + path_to_mmpdb + ' fragment ' \
+        sp_call = 'python -m mmpdblib fragment ' \
                   + ' --num-jobs 20 --delimiter tab --cache ' \
                   + fragfile + ' --output ' + fragfile + ' ' + smifile
     else:
         print("Generating MMP Fragments for " + infile)
-        sp_call = 'python '+ path_to_mmpdb + ' fragment' \
+        sp_call = 'python -m mmpdblib fragment' \
                   + ' --num-jobs 20 -i smi --delimiter tab ' \
                   + ' --max-rotatable-bonds 20 --output ' + fragfile + ' ' + smifile
 
     subprocess.call(sp_call, shell=True)        # Fragmentation
 
     print("Indexing MMP Fragments for " + infile)
-    sp_call = 'python '+ path_to_mmpdb + ' index'
+    sp_call = 'python -m mmpdblib index'
     sp_call = sp_call + ' --out csv --symmetric --output ' + mmp_outfile + ' ' + fragfile
     subprocess.call(sp_call, shell=True)        # Fragment_matching & Indexing
 
