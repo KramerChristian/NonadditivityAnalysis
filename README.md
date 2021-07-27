@@ -4,25 +4,24 @@
 
 ## Synposis
 
-
 A program to find key complex patterns in SAR data
-
-
---------------------
-
 
 ## Installation
 
 The program has been tested on Python 3.6.
 
-You will need a copy of the RDKit cheminformatics toolkit, available
-from http://rdkit.org/. The easiest way is to install via PyPI with
-`pip install rdkit-pypi`.
-
-Install from [PyPI](https://pypi.org/project/nonadditivity/) with:
+If you've installed RDKit already (e.g., with Anaconda), you can
+install from [PyPI](https://pypi.org/project/nonadditivity/) with:
 
 ```bash
 $ pip install nonadditivity
+```
+
+If you haven't already installed RDKit, you can either follow the instructions
+on http://rdkit.org/ or simply install from PyPI using the `[rdkit]` extra:
+
+```bash
+$ pip install nonadditivity[rdkit]
 ```
 
 Install directly from source with:
