@@ -18,6 +18,12 @@ You will need a copy of the RDKit cheminformatics toolkit, available
 from http://rdkit.org/. The easiest way is to install via PyPI with
 `pip install rdkit-pypi`.
 
+Install from [PyPI](https://pypi.org/project/nonadditivity/) with:
+
+```bash
+$ pip install nonadditivity
+```
+
 Install directly from source with:
 
 ```bash
@@ -32,8 +38,7 @@ $ cd NonadditivityAnalysis
 $ pip install -e .
 ```
 
-The path to mmpdb has to be set on line 44 of the Nonadditivity analysis 
-code. If a special salt clean-up is required, the path to the salt definitions
+If a special salt clean-up is required, the path to the salt definitions
 can be set on line 43.
 
 ## How to run the program and get help
