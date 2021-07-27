@@ -40,9 +40,11 @@ import rdkit
 import os.path
 from rdkit import RDConfig
 
-salt_defns = os.path.join(RDConfig.RDDataDir, "Salts.txt")  # replace if you have more specific definitions
+salt_defns = os.path.join(
+    RDConfig.RDDataDir, "Salts.txt"
+)  # replace if you have more specific definitions
 
-font_path = "arial.ttf"   # Only used in draw_pics, currently not supported
+font_path = "arial.ttf"  # Only used in draw_pics, currently not supported
 
 ########################
 
@@ -82,7 +84,7 @@ def mad_std(values):
     """
 
     median = np.median(values)
-    ad = np.abs(values-median)
+    ad = np.abs(values - median)
     mad = np.median(ad)
 
     return 1.4826 * mad
@@ -135,14 +137,23 @@ def build_neighbor_dictionary(mmps, no_chiral=False):
             a_idx2 = [atom.GetSmarts() for atom in a.GetAtoms()].index("[*:2]")
             b_idx1 = [atom.GetSmarts() for atom in b.GetAtoms()].index("[*:1]")
             b_idx2 = [atom.GetSmarts() for atom in b.GetAtoms()].index("[*:2]")
-            if not Chem.GetDistanceMatrix(a)[a_idx1, a_idx2] == Chem.GetDistanceMatrix(b)[b_idx1, b_idx2]:
+            if (
+                not Chem.GetDistanceMatrix(a)[a_idx1, a_idx2]
+                == Chem.GetDistanceMatrix(b)[b_idx1, b_idx2]
+            ):
                 continue
             if "[*:3]" in var_lhs:
                 a_idx3 = [atom.GetSmarts() for atom in a.GetAtoms()].index("[*:3]")
                 b_idx3 = [atom.GetSmarts() for atom in b.GetAtoms()].index("[*:3]")
-                if not Chem.GetDistanceMatrix(a)[a_idx1, a_idx3] == Chem.GetDistanceMatrix(b)[b_idx1, b_idx3]:
+                if (
+                    not Chem.GetDistanceMatrix(a)[a_idx1, a_idx3]
+                    == Chem.GetDistanceMatrix(b)[b_idx1, b_idx3]
+                ):
                     continue
-                if not Chem.GetDistanceMatrix(a)[a_idx2, a_idx3] == Chem.GetDistanceMatrix(b)[b_idx2, b_idx3]:
+                if (
+                    not Chem.GetDistanceMatrix(a)[a_idx2, a_idx3]
+                    == Chem.GetDistanceMatrix(b)[b_idx2, b_idx3]
+                ):
                     continue
         # Add to neighbor dictionary
         if id_lhs in neighs.keys():
@@ -168,7 +179,7 @@ def get_circles(neighs):
     still_in = {key: True for key in neighs.keys()}
     neighbors = {key: [i[0] for i in dat] for key, dat in neighs.items()}
 
-    trans = {}    
+    trans = {}
     for key, dat in neighs.items():
         for partner, T1 in dat:
             trans[(key, partner)] = T1
@@ -182,23 +193,41 @@ def get_circles(neighs):
     for C1 in iter(neighs.keys()):
         still_in_2 = still_in.copy()
         for C2 in neighbors[C1]:
-            if not still_in[C2]: continue
+            if not still_in[C2]:
+                continue
             for C3, C4 in trans_pairs[trans[(C1, C2)]]:
-                if not still_in_2[C3]: continue
-                if not still_in_2[C4]: continue
-                if C3 not in neighbors[C1]: continue
-                if C4 not in neighbors[C2]: continue
-                if C2 == C3: continue
-                if C1 == C4: continue
-                if trans[(C1, C3)] == trans[(C2, C4)]: circles.append((C1, C2, C4, C3))
+                if not still_in_2[C3]:
+                    continue
+                if not still_in_2[C4]:
+                    continue
+                if C3 not in neighbors[C1]:
+                    continue
+                if C4 not in neighbors[C2]:
+                    continue
+                if C2 == C3:
+                    continue
+                if C1 == C4:
+                    continue
+                if trans[(C1, C3)] == trans[(C2, C4)]:
+                    circles.append((C1, C2, C4, C3))
             still_in_2[C2] = False
         still_in[C1] = False
 
     return circles
 
 
-def write_circles_to_output(circles, meas, neighs, outfile, props, units, images=False,
-                            include_censored=False, update=False, series_column=None):
+def write_circles_to_output(
+    circles,
+    meas,
+    neighs,
+    outfile,
+    props,
+    units,
+    images=False,
+    include_censored=False,
+    update=False,
+    series_column=None,
+):
     """
     Get Diffs and write to output
     """
@@ -207,9 +236,11 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
     #########
     # Assemble header
 
-    header = "Compound1\tCompound2\tCompound3\tCompound4\t" \
-             + "SMILES1\tSMILES2\tSMILES3\tSMILES4\tSeries\t" \
-             + "Transformation1\tTransformation2\tProperty\t"
+    header = (
+        "Compound1\tCompound2\tCompound3\tCompound4\t"
+        + "SMILES1\tSMILES2\tSMILES3\tSMILES4\tSeries\t"
+        + "Transformation1\tTransformation2\tProperty\t"
+    )
 
     for i in range(4):
         header = header + "Prop_Cpd" + str(i + 1) + "\t"
@@ -229,7 +260,7 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
 
     header = header + "Circle_ID\tTheo_Quantile\n"
 
-    nonadd_percompound_file = outfile[:outfile.index(".")] + "_perCompound.txt"
+    nonadd_percompound_file = outfile[: outfile.index(".")] + "_perCompound.txt"
     napc_header = "Compound_ID\tSMILES\tSeries\tProperty\tOperator\tMeasured\t"
     if series_column:
         napc_header = napc_header + "Nonadd_pure\tnOccurence_pure\tNonadd_SD_pure\t"
@@ -237,10 +268,12 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
     else:
         napc_header = napc_header + "Nonadd_pC\tnOccurence\tNonadd_SD\n"
 
-    circle_to_cpd_file = outfile[:outfile.index(".")] + "_c2c.txt"
+    circle_to_cpd_file = outfile[: outfile.index(".")] + "_c2c.txt"
     c2c_header = "Circle_ID\tCompound_ID\n"
 
-    with open(outfile, "w") as f, open(nonadd_percompound_file, "w") as g, open(circle_to_cpd_file, "w") as h:
+    with open(outfile, "w") as f, open(nonadd_percompound_file, "w") as g, open(
+        circle_to_cpd_file, "w"
+    ) as h:
         f.write(header)
         g.write(napc_header)
         h.write(c2c_header)
@@ -261,12 +294,16 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
             for circle_idx, cpds in enumerate(circles):
                 ############
                 # 1st: Randomly reorder circles
-                min_idx = random.choice(range(4))     # This does a random selection of the starting compound
+                min_idx = random.choice(
+                    range(4)
+                )  # This does a random selection of the starting compound
 
-                circles[circle_idx] = (circles[circle_idx] + circles[circle_idx])[min_idx:min_idx + 4]  # Reorder Ids
+                circles[circle_idx] = (circles[circle_idx] + circles[circle_idx])[
+                    min_idx : min_idx + 4
+                ]  # Reorder Ids
 
                 smis = [meas[cpd]["smiles"] for cpd in cpds]  # Reorder SMILES
-                smis = (smis + smis)[min_idx:min_idx + 4]
+                smis = (smis + smis)[min_idx : min_idx + 4]
 
                 acts = [meas[cpd]["pAct"][target_idx] for cpd in cpds]  # Reorder Activities
                 if "NA" in acts:
@@ -281,7 +318,7 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                     if not set(cens_signs) == {""}:
                         continue
 
-                acts = (acts + acts)[min_idx:min_idx + 4]
+                acts = (acts + acts)[min_idx : min_idx + 4]
 
                 ############
                 # 2nd: Write Info to output lines
@@ -289,10 +326,19 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                 line = line + "\t".join(smis) + "\t"  # SMILES
 
                 if series_column:
-                    if len(set([meas[cpds[0]]["series"],
-                                meas[cpds[1]]["series"],
-                                meas[cpds[2]]["series"],
-                                meas[cpds[3]]["series"]])) == 1:
+                    if (
+                        len(
+                            set(
+                                [
+                                    meas[cpds[0]]["series"],
+                                    meas[cpds[1]]["series"],
+                                    meas[cpds[2]]["series"],
+                                    meas[cpds[3]]["series"],
+                                ]
+                            )
+                        )
+                        == 1
+                    ):
                         line = line + meas[cpds[0]]["series"] + "\t"
                         series_id.append(meas[cpds[0]]["series"])
                         pure_series = True
@@ -303,9 +349,13 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                 else:
                     line = line + " \t"
 
-                transf_idx1 = [j[0] for j in neighs[circles[circle_idx][0]]].index(circles[circle_idx][1])
+                transf_idx1 = [j[0] for j in neighs[circles[circle_idx][0]]].index(
+                    circles[circle_idx][1]
+                )
                 line = line + neighs[circles[circle_idx][0]][transf_idx1][1] + "\t"
-                transf_idx2 = [j[0] for j in neighs[circles[circle_idx][1]]].index(circles[circle_idx][2])
+                transf_idx2 = [j[0] for j in neighs[circles[circle_idx][1]]].index(
+                    circles[circle_idx][2]
+                )
                 line = line + neighs[circles[circle_idx][1]][transf_idx2][1] + "\t"
 
                 line = line + target + "\t"
@@ -343,30 +393,44 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                             nonadd_percompound[cpd] = [sign_switch * nonadd]
 
                 if images:
-                    image_file = "_".join(["images/AddCyc", target] + list(circles[circle_idx]) + [".png"])
+                    image_file = "_".join(
+                        ["images/AddCyc", target] + list(circles[circle_idx]) + [".png"]
+                    )
                     line = line + image_file + "\t"
                     if update and os.path.exists(image_file):
                         continue
                     else:
-                        draw_image(ids=circles[circle_idx],
-                                   smiles=smis,
-                                   tsmarts=[neighs[circles[circle_idx][0]][transf_idx1][1],
-                                            neighs[circles[circle_idx][1]][transf_idx2][1]],
-                                   pActs=["{:.3g}".format(meas[k]["pAct"][target_idx]) for k in circles[circle_idx]],
-                                   Acts=["" if units[target_idx] == "noconv"
-                                         else "{:.3g}".format(meas[k]["Act"][target_idx])
-                                         for k in circles[circle_idx]],
-                                   qualifiers=[meas[k]["qualifiers"][target_idx] for k in circles[circle_idx]],
-                                   nonadd="{:.2g}".format(nonadd),
-                                   target=target,
-                                   mcss_tot=mcss_tot,
-                                   image_file=image_file)
+                        draw_image(
+                            ids=circles[circle_idx],
+                            smiles=smis,
+                            tsmarts=[
+                                neighs[circles[circle_idx][0]][transf_idx1][1],
+                                neighs[circles[circle_idx][1]][transf_idx2][1],
+                            ],
+                            pActs=[
+                                "{:.3g}".format(meas[k]["pAct"][target_idx])
+                                for k in circles[circle_idx]
+                            ],
+                            Acts=[
+                                ""
+                                if units[target_idx] == "noconv"
+                                else "{:.3g}".format(meas[k]["Act"][target_idx])
+                                for k in circles[circle_idx]
+                            ],
+                            qualifiers=[
+                                meas[k]["qualifiers"][target_idx] for k in circles[circle_idx]
+                            ],
+                            nonadd="{:.2g}".format(nonadd),
+                            target=target,
+                            mcss_tot=mcss_tot,
+                            image_file=image_file,
+                        )
 
-                circle_id = "_".join(list(circles[circle_idx])+[target])
+                circle_id = "_".join(list(circles[circle_idx]) + [target])
                 line = line + circle_id + "\t"
                 outlines.append(line)
                 for i in range(4):
-                    c2c_lines.append(circle_id+"\t"+circles[circle_idx][i]+"\n")
+                    c2c_lines.append(circle_id + "\t" + circles[circle_idx][i] + "\n")
 
             if len(outlines) < 3:
                 continue
@@ -376,26 +440,41 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
             if series_column:
                 theo_quantiles = []
                 for series in set(series_id):
-                    a = sorted([(add_diff, x[0])
-                                for add_diff, x in zip(add_diffs, enumerate(series_id))
-                                if x[1] == series])
+                    a = sorted(
+                        [
+                            (add_diff, x[0])
+                            for add_diff, x in zip(add_diffs, enumerate(series_id))
+                            if x[1] == series
+                        ]
+                    )
                     outline_idxs = [j[1] for j in a]
                     if len(outline_idxs) > 2:
                         quantiles = list(stats.probplot(outline_idxs)[0][0])
-                    elif len(outline_idxs) == 2:                       # To avoid a scipy warning
-                        quantiles = [-0.54495214,  0.54495214]
+                    elif len(outline_idxs) == 2:  # To avoid a scipy warning
+                        quantiles = [-0.54495214, 0.54495214]
                     else:
-                        quantiles = [0.]
+                        quantiles = [0.0]
                     theo_quantiles = theo_quantiles + list(zip(outline_idxs, quantiles))
 
                     # Write estimated SD per series to STDOUT.
                     # SD is multiplied by 1/sqrt(4) = 0.5 to obtain uncertainty of individual measurement
                     series_add_diffs = [j[0] for j in a]
                     if len(series_add_diffs) > 3:
-                        print("and series ", series, " based on ", str(len(series_add_diffs)), " cycles.")
-                        print("{0:.2f}".format(0.5 * numpy_std(series_add_diffs)), " from normal SD")
+                        print(
+                            "and series ",
+                            series,
+                            " based on ",
+                            str(len(series_add_diffs)),
+                            " cycles.",
+                        )
+                        print(
+                            "{0:.2f}".format(0.5 * numpy_std(series_add_diffs)), " from normal SD"
+                        )
                         print("{0:.2f}".format(0.5 * mad_std(series_add_diffs)), " from MAD")
-                        print("{0:.2f}".format(0.5 * Sn_MedMed_std(series_add_diffs)), " from Median of Medians")
+                        print(
+                            "{0:.2f}".format(0.5 * Sn_MedMed_std(series_add_diffs)),
+                            " from Median of Medians",
+                        )
 
                 theo_quantiles = [j[1] for j in sorted(theo_quantiles)]
 
@@ -410,7 +489,10 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                     print("based on ", str(len(series_add_diffs)), " cycles.")
                     print("{0:.2f}".format(0.5 * numpy_std(series_add_diffs)), " from normal SD")
                     print("{0:.2f}".format(0.5 * mad_std(series_add_diffs)), " from MAD")
-                    print("{0:.2f}".format(0.5 * Sn_MedMed_std(series_add_diffs)), " from Median of Medians")
+                    print(
+                        "{0:.2f}".format(0.5 * Sn_MedMed_std(series_add_diffs)),
+                        " from Median of Medians",
+                    )
 
             print()
 
@@ -422,20 +504,26 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                     if len(values) == 0:
                         continue
                     series = meas[ID]["series"]
-                    outline = [ID,
-                               meas[ID]["smiles"],
-                               series,
-                               target,
-                               meas[ID]["qualifiers"][target_idx],
-                               "{:.2g}".format(meas[ID]["pAct"][target_idx])]
+                    outline = [
+                        ID,
+                        meas[ID]["smiles"],
+                        series,
+                        target,
+                        meas[ID]["qualifiers"][target_idx],
+                        "{:.2g}".format(meas[ID]["pAct"][target_idx]),
+                    ]
                     values_pure = [value[0] for value in values if value[1] == "pure"]
                     if len(values_pure) > 0:
                         nonadd_cnt_pure = len(values_pure)
                         nonadd_pure = sum(values_pure) / nonadd_cnt_pure
-                        nonadd_sd_pure = math.sqrt(sum([(i-nonadd_pure)**2 for i in values_pure]) / nonadd_cnt_pure)
-                        outline = outline + ["{:.2g}".format(nonadd_pure),
-                                             str(nonadd_cnt_pure),
-                                             "{:.2g}".format(nonadd_sd_pure)]
+                        nonadd_sd_pure = math.sqrt(
+                            sum([(i - nonadd_pure) ** 2 for i in values_pure]) / nonadd_cnt_pure
+                        )
+                        outline = outline + [
+                            "{:.2g}".format(nonadd_pure),
+                            str(nonadd_cnt_pure),
+                            "{:.2g}".format(nonadd_sd_pure),
+                        ]
                     else:
                         outline = outline + ["", "", ""]
 
@@ -443,31 +531,39 @@ def write_circles_to_output(circles, meas, neighs, outfile, props, units, images
                     if len(values_mixed) > 0:
                         nonadd_cnt_mixed = len(values_mixed)
                         nonadd_mixed = sum(values_mixed) / nonadd_cnt_mixed
-                        nonadd_sd_mixed = math.sqrt(sum([(i-nonadd_mixed)**2 for i in values_mixed]) / nonadd_cnt_mixed)
-                        outline = outline + ["{:.2g}".format(nonadd_mixed),
-                                             str(nonadd_cnt_mixed),
-                                             "{:.2g}".format(nonadd_sd_mixed)]
+                        nonadd_sd_mixed = math.sqrt(
+                            sum([(i - nonadd_mixed) ** 2 for i in values_mixed]) / nonadd_cnt_mixed
+                        )
+                        outline = outline + [
+                            "{:.2g}".format(nonadd_mixed),
+                            str(nonadd_cnt_mixed),
+                            "{:.2g}".format(nonadd_sd_mixed),
+                        ]
                     else:
                         outline = outline + ["", "", ""]
 
-                    g.write("\t".join(outline)+"\n")
+                    g.write("\t".join(outline) + "\n")
 
                 else:
                     if len(values) == 0:
                         continue
                     nonadd_cnt = len(values)
                     nonadd = sum(values) / nonadd_cnt
-                    nonadd_sd = math.sqrt(sum([(i-nonadd)**2 for i in values]) / nonadd_cnt)
-                    outline = "\t".join([ID,
-                                         meas[ID]["smiles"],
-                                         "",
-                                         target,
-                                         meas[ID]["qualifiers"][target_idx],
-                                         "{:.2g}".format(meas[ID]["pAct"][target_idx]),
-                                         "{:.2g}".format(nonadd),
-                                         str(nonadd_cnt),
-                                         "{:.2g}".format(nonadd_sd)])
-                    g.write(outline+"\n")
+                    nonadd_sd = math.sqrt(sum([(i - nonadd) ** 2 for i in values]) / nonadd_cnt)
+                    outline = "\t".join(
+                        [
+                            ID,
+                            meas[ID]["smiles"],
+                            "",
+                            target,
+                            meas[ID]["qualifiers"][target_idx],
+                            "{:.2g}".format(meas[ID]["pAct"][target_idx]),
+                            "{:.2g}".format(nonadd),
+                            str(nonadd_cnt),
+                            "{:.2g}".format(nonadd_sd),
+                        ]
+                    )
+                    g.write(outline + "\n")
 
             for line in c2c_lines:
                 h.write(line)
@@ -479,34 +575,40 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
     """
     Draw Nonadditivity Circle to Image file
     """
-    
+
     cpds = [Chem.MolFromSmiles(i) for i in smiles]
 
     #########
     # Compute Coordinates of local MCSS, aligned with global MCSS
-    mcss_loc = Chem.MolFromSmarts(rdFMCS.FindMCS(cpds, completeRingsOnly=True, timeout=10).smartsString)
-    
+    mcss_loc = Chem.MolFromSmarts(
+        rdFMCS.FindMCS(cpds, completeRingsOnly=True, timeout=10).smartsString
+    )
+
     if mcss_tot:
-        mcss_tot_coords = [mcss_tot.GetConformer().GetAtomPosition(x) for x in range(mcss_tot.GetNumAtoms())]
+        mcss_tot_coords = [
+            mcss_tot.GetConformer().GetAtomPosition(x) for x in range(mcss_tot.GetNumAtoms())
+        ]
         coords2D_tot = [Geometry.Point2D(pt.x, pt.y) for pt in mcss_tot_coords]
-    
+
         mcss_match = mcss_loc.GetSubstructMatch(mcss_tot)
-    
+
         coordDict = {}
         for i, coord in enumerate(coords2D_tot):
             coordDict[mcss_match[i]] = coord
-        
+
         AllChem.Compute2DCoords(mcss_loc, coordMap=coordDict)
     else:
         AllChem.Compute2DCoords(mcss_loc)
-    
+
     #########
     # Align circle compounds to local MCSS
-    
+
     matchVs = [x.GetSubstructMatch(mcss_loc) for x in cpds]
 
     # compute reference coordinates:
-    mcss_loc_coords = [mcss_loc.GetConformer().GetAtomPosition(x) for x in range(mcss_loc.GetNumAtoms())]
+    mcss_loc_coords = [
+        mcss_loc.GetConformer().GetAtomPosition(x) for x in range(mcss_loc.GetNumAtoms())
+    ]
     coords2D_loc = [Geometry.Point2D(pt.x, pt.y) for pt in mcss_loc_coords]
 
     # generate coords for the other molecules using the common substructure
@@ -531,50 +633,103 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
 
     new_im = Image.new("RGB", size=(650, 670), color=(255, 255, 255, 0))
     if Acts[0] != "":
-        new_im.paste(Draw.MolToImage(cpds[0],
-                                     size=(300, 300),
-                                     legend=ids[0] + "        " + qualifiers_inv[0] + Acts[0] + " ("
-                                     + qualifiers[0] + pActs[0] + ")"),
-                     (0, 0))
-        new_im.paste(Draw.MolToImage(cpds[1],
-                                     size=(300, 300),
-                                     legend=ids[1] + "        " + qualifiers_inv[1] + Acts[1] + " ("
-                                     + qualifiers[1] + pActs[1] + ")"),
-                     (350, 0))
-        new_im.paste(Draw.MolToImage(cpds[2],
-                                     size=(300, 300),
-                                     legend=ids[2] + "        " + qualifiers_inv[2] + Acts[2] + " ("
-                                     + qualifiers[2] + pActs[2]+")"),
-                     (350, 350))
-        new_im.paste(Draw.MolToImage(cpds[3],
-                                     size=(300, 300),
-                                     legend=ids[3] + "        " + qualifiers_inv[3] + Acts[3] + " ("
-                                     + qualifiers[3] + pActs[3] + ")"),
-                     (0, 350))
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[0],
+                size=(300, 300),
+                legend=ids[0]
+                + "        "
+                + qualifiers_inv[0]
+                + Acts[0]
+                + " ("
+                + qualifiers[0]
+                + pActs[0]
+                + ")",
+            ),
+            (0, 0),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[1],
+                size=(300, 300),
+                legend=ids[1]
+                + "        "
+                + qualifiers_inv[1]
+                + Acts[1]
+                + " ("
+                + qualifiers[1]
+                + pActs[1]
+                + ")",
+            ),
+            (350, 0),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[2],
+                size=(300, 300),
+                legend=ids[2]
+                + "        "
+                + qualifiers_inv[2]
+                + Acts[2]
+                + " ("
+                + qualifiers[2]
+                + pActs[2]
+                + ")",
+            ),
+            (350, 350),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[3],
+                size=(300, 300),
+                legend=ids[3]
+                + "        "
+                + qualifiers_inv[3]
+                + Acts[3]
+                + " ("
+                + qualifiers[3]
+                + pActs[3]
+                + ")",
+            ),
+            (0, 350),
+        )
 
         draw = ImageDraw.Draw(new_im)
         font = ImageFont.truetype(font_path, 14)
         draw.text((260, 330), "Nonadditivity: " + nonadd, fill=(0, 0, 0, 0), font=font)
 
         font = ImageFont.truetype(font_path, 10)
-        draw.text((10, 650), "[uM]  (-log10[M])  Activity in Assay: " + target, fill=(0, 0, 0, 0), font=font)
+        draw.text(
+            (10, 650),
+            "[uM]  (-log10[M])  Activity in Assay: " + target,
+            fill=(0, 0, 0, 0),
+            font=font,
+        )
     else:
-        new_im.paste(Draw.MolToImage(cpds[0],
-                                     size=(300, 300),
-                                     legend=ids[0]+"        "+qualifiers[0]+pActs[0]),
-                     (0, 0))
-        new_im.paste(Draw.MolToImage(cpds[1],
-                                     size=(300, 300),
-                                     legend=ids[1]+"        "+qualifiers[1]+pActs[1]),
-                     (350, 0))
-        new_im.paste(Draw.MolToImage(cpds[2],
-                                     size=(300, 300),
-                                     legend=ids[2]+"        "+qualifiers[2]+pActs[2]),
-                     (350, 350))
-        new_im.paste(Draw.MolToImage(cpds[3],
-                                     size=(300, 300),
-                                     legend=ids[3]+"        "+qualifiers[3]+pActs[3]),
-                     (0, 350))
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[0], size=(300, 300), legend=ids[0] + "        " + qualifiers[0] + pActs[0]
+            ),
+            (0, 0),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[1], size=(300, 300), legend=ids[1] + "        " + qualifiers[1] + pActs[1]
+            ),
+            (350, 0),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[2], size=(300, 300), legend=ids[2] + "        " + qualifiers[2] + pActs[2]
+            ),
+            (350, 350),
+        )
+        new_im.paste(
+            Draw.MolToImage(
+                cpds[3], size=(300, 300), legend=ids[3] + "        " + qualifiers[3] + pActs[3]
+            ),
+            (0, 350),
+        )
 
         draw = ImageDraw.Draw(new_im)
         font = ImageFont.truetype(font_path, 14)
@@ -601,28 +756,28 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
     draw.line((505, 340, 500, 350), fill=0, width=2)
 
     # Add Reaction Parts
-    b = Chem.MolFromSmiles(tsmarts[0][:tsmarts[0].index(">")])
+    b = Chem.MolFromSmiles(tsmarts[0][: tsmarts[0].index(">")])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (300, 90))
 
-    b = Chem.MolFromSmiles(tsmarts[0][tsmarts[0].index(">")+2:])
+    b = Chem.MolFromSmiles(tsmarts[0][tsmarts[0].index(">") + 2 :])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (300, 160))
 
-    b = Chem.MolFromSmiles(tsmarts[0][:tsmarts[0].index(">")])
+    b = Chem.MolFromSmiles(tsmarts[0][: tsmarts[0].index(">")])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (300, 440))
 
-    b = Chem.MolFromSmiles(tsmarts[0][tsmarts[0].index(">")+2:])
+    b = Chem.MolFromSmiles(tsmarts[0][tsmarts[0].index(">") + 2 :])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (300, 510))
 
-    b = Chem.MolFromSmiles(tsmarts[1][:tsmarts[1].index(">")])
+    b = Chem.MolFromSmiles(tsmarts[1][: tsmarts[1].index(">")])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (80, 300))
 
-    b = Chem.MolFromSmiles(tsmarts[1][tsmarts[1].index(">")+2:])
+    b = Chem.MolFromSmiles(tsmarts[1][tsmarts[1].index(">") + 2 :])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (170, 300))
 
-    b = Chem.MolFromSmiles(tsmarts[1][:tsmarts[1].index(">")])
+    b = Chem.MolFromSmiles(tsmarts[1][: tsmarts[1].index(">")])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (430, 300))
 
-    b = Chem.MolFromSmiles(tsmarts[1][tsmarts[1].index(">")+2:])
+    b = Chem.MolFromSmiles(tsmarts[1][tsmarts[1].index(">") + 2 :])
     new_im.paste(Draw.MolToImage(b, size=(50, 50)), (520, 300))
 
     new_im.save(image_file)
@@ -643,15 +798,15 @@ def write_smiles_id_file(meas, infile, max_heavy):
     Format dataset for MMP analysis and write to temp file
     """
 
-    smifile = infile[:infile.index(".")]+"_ligands.smi"
-    f = open(smifile, 'w')
+    smifile = infile[: infile.index(".")] + "_ligands.smi"
+    f = open(smifile, "w")
 
     for entry in meas.keys():
         try:
             mol = Chem.MolFromSmiles(meas[entry]["smiles"])
             if mol.GetNumHeavyAtoms() > max_heavy:
                 continue
-            f.write(meas[entry]["smiles"] + "\t" + entry + '\n')
+            f.write(meas[entry]["smiles"] + "\t" + entry + "\n")
         except:
             print("Skipping compound", entry)
             continue
@@ -663,40 +818,51 @@ def write_smiles_id_file(meas, infile, max_heavy):
 
 def calc_raw_MMPs(infile, update):
     """
-Generate MMP Indexing and Matching using mmpdb
+    Generate MMP Indexing and Matching using mmpdb
     """
-    smifile = infile[:infile.index(".")] + "_ligands.smi"
-    fragfile = infile[:infile.index(".")] + ".fragments"
-    mmp_outfile = infile[:infile.index(".")] + "_mmp_raw.csv"
+    smifile = infile[: infile.index(".")] + "_ligands.smi"
+    fragfile = infile[: infile.index(".")] + ".fragments"
+    mmp_outfile = infile[: infile.index(".")] + "_mmp_raw.csv"
 
     # TODO switch system calls to just importing the python code and using it directly
     if update:
         print("Updating MMP Fragments for " + infile)
-        sp_call = 'python -m mmpdblib fragment ' \
-                  + ' --num-jobs 20 --delimiter tab --cache ' \
-                  + fragfile + ' --output ' + fragfile + ' ' + smifile
+        sp_call = (
+            "python -m mmpdblib fragment "
+            + " --num-jobs 20 --delimiter tab --cache "
+            + fragfile
+            + " --output "
+            + fragfile
+            + " "
+            + smifile
+        )
     else:
         print("Generating MMP Fragments for " + infile)
-        sp_call = 'python -m mmpdblib fragment' \
-                  + ' --num-jobs 20 -i smi --delimiter tab ' \
-                  + ' --max-rotatable-bonds 20 --output ' + fragfile + ' ' + smifile
+        sp_call = (
+            "python -m mmpdblib fragment"
+            + " --num-jobs 20 -i smi --delimiter tab "
+            + " --max-rotatable-bonds 20 --output "
+            + fragfile
+            + " "
+            + smifile
+        )
 
-    subprocess.call(sp_call, shell=True)        # Fragmentation
+    subprocess.call(sp_call, shell=True)  # Fragmentation
 
     print("Indexing MMP Fragments for " + infile)
-    sp_call = 'python -m mmpdblib index'
-    sp_call = sp_call + ' --out csv --symmetric --output ' + mmp_outfile + ' ' + fragfile
-    subprocess.call(sp_call, shell=True)        # Fragment_matching & Indexing
+    sp_call = "python -m mmpdblib index"
+    sp_call = sp_call + " --out csv --symmetric --output " + mmp_outfile + " " + fragfile
+    subprocess.call(sp_call, shell=True)  # Fragment_matching & Indexing
 
     return
 
 
 def read_raw_mmps(infile):
     """
-Read raw precalculated MMPs
+    Read raw precalculated MMPs
     """
-    mmp_outfile = infile[:infile.index(".")]+"_mmp_raw.csv"
-    f = open(mmp_outfile, 'r')
+    mmp_outfile = infile[: infile.index(".")] + "_mmp_raw.csv"
+    f = open(mmp_outfile, "r")
     mmps = f.readlines()
     f.close()
 
@@ -708,7 +874,7 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
     Read input file and assemble dictionaries
     """
 
-    error_files = infile[:infile.index(".")] + "_problem_smiles.smi"
+    error_files = infile[: infile.index(".")] + "_problem_smiles.smi"
 
     if delimiter == "tab":
         delimiter = "\t"
@@ -719,18 +885,18 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
     else:
         delimiter = ","
 
-    with open(infile, 'r') as f, open(error_files, 'w') as g:
+    with open(infile, "r") as f, open(error_files, "w") as g:
         ########
         # Process header
-        header = [i.strip('"') for i in f.readline().rstrip('\n').split(delimiter)]
+        header = [i.strip('"') for i in f.readline().rstrip("\n").split(delimiter)]
 
         ########
         # Figure out Column ID of SMILES and ID column
         id_col = [i for i, name in enumerate(header) if "SRN" in name or "ID" in name]
-        id_col = (0 if len(id_col) == 0 else id_col[0])
+        id_col = 0 if len(id_col) == 0 else id_col[0]
 
         smi_col = [i for i, name in enumerate(header) if "smiles" in name.lower()]
-        smi_col = (1 if len(smi_col) == 0 else smi_col[0])
+        smi_col = 1 if len(smi_col) == 0 else smi_col[0]
 
         if series_column:
             ser_col = header.index(series_column)
@@ -751,8 +917,10 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
         # Figure out conversion of target columns
         # Valid Flags for not converting activity data to pActivity: pIC50, pEC50, pKi, pKd, noconv
         log_flags = ["pIC50", "pEC50", "pKi", "pKd", "pCC50", "pIC20", "pID50", "noconv"]
-        col_convert = [False if any(log_flag.lower() in target.lower() for log_flag in log_flags)
-                       else True for target in props]
+        col_convert = [
+            False if any(log_flag.lower() in target.lower() for log_flag in log_flags) else True
+            for target in props
+        ]
         log10 = [False for target in props]
 
         #########
@@ -767,11 +935,25 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                     col_convert[i] = False
                     log10[i] = True
             if col_convert[i]:
-                print("Activity column #" + str(i + 1) + ": " + props[i] + " will be converted to -log10(" + props[
-                    i] + ")")
+                print(
+                    "Activity column #"
+                    + str(i + 1)
+                    + ": "
+                    + props[i]
+                    + " will be converted to -log10("
+                    + props[i]
+                    + ")"
+                )
             elif log10[i]:
-                print("Activity column #" + str(i + 1) + ": " + props[i] + " will be converted to log10(" + props[
-                    i] + ")")
+                print(
+                    "Activity column #"
+                    + str(i + 1)
+                    + ": "
+                    + props[i]
+                    + " will be converted to log10("
+                    + props[i]
+                    + ")"
+                )
             else:
                 print("Activity column #" + str(i + 1) + ": " + props[i])
 
@@ -787,18 +969,13 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
             ########
             # Assemble data
         remover = SaltRemover.SaltRemover(defnFilename=salt_defns)
-        unit_conv = {"M": 1.0,
-                     "mM": 1E-3,
-                     "uM": 1E-6,
-                     "nM": 1E-9,
-                     "pM": 1E-12,
-                     "noconv": 1.0}
+        unit_conv = {"M": 1.0, "mM": 1e-3, "uM": 1e-6, "nM": 1e-9, "pM": 1e-12, "noconv": 1.0}
         meas = dict()
         smiles_registered = dict()
- 
+
         for line in f:
-            line = [i.strip('"') for i in line.rstrip('\n').split(delimiter)]
-            if line[0][0] == "#":         # skip commented-out compounds
+            line = [i.strip('"') for i in line.rstrip("\n").split(delimiter)]
+            if line[0][0] == "#":  # skip commented-out compounds
                 continue
             compound_id = line[id_col]
             if compound_id in meas:
@@ -827,13 +1004,20 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                 continue
 
             if smiles in smiles_registered:
-                print("Two entries with the same structure: "+smiles_registered[smiles]+" and "+compound_id)
+                print(
+                    "Two entries with the same structure: "
+                    + smiles_registered[smiles]
+                    + " and "
+                    + compound_id
+                )
                 print("Nonadd will use the first compound and discard the second.\n")
                 continue
             else:
                 smiles_registered[smiles] = compound_id
 
-            meas[compound_id] = dict(smiles=smiles, Act=[], pAct=[], qualifiers=[], mwt=mwt, series=None)
+            meas[compound_id] = dict(
+                smiles=smiles, Act=[], pAct=[], qualifiers=[], mwt=mwt, series=None
+            )
             if series_column:
                 meas[compound_id]["series"] = line[ser_col]
             for i, target in enumerate(props):
@@ -851,16 +1035,26 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                         meas[compound_id]["pAct"].append("NA")
                     elif is_number(line[act_col[i]]):
                         if float(line[act_col[i]]) <= 0.0:
-                            print("Cannot interpret measured activity of "+line[act_col[i]]+units[i]+" for compound "+compound_id)
+                            print(
+                                "Cannot interpret measured activity of "
+                                + line[act_col[i]]
+                                + units[i]
+                                + " for compound "
+                                + compound_id
+                            )
                             print("Please fix. Exiting")
                             exit(0)
                         meas[compound_id]["qualifiers"].append("")
                         meas[compound_id]["Act"].append(float(line[act_col[i]]))
-                        meas[compound_id]["pAct"].append((-1) * math.log10(float(line[act_col[i]]) * u_conv))
+                        meas[compound_id]["pAct"].append(
+                            (-1) * math.log10(float(line[act_col[i]]) * u_conv)
+                        )
                     elif line[act_col[i]][0] in (">", "<", "*") and is_number(line[act_col[i]][1:]):
                         meas[compound_id]["qualifiers"].append(line[act_col[i]][0])
                         meas[compound_id]["Act"].append(float(line[act_col[i]][1:]))
-                        meas[compound_id]["pAct"].append((-1) * math.log10(float(line[act_col[i]][1:]) * u_conv))
+                        meas[compound_id]["pAct"].append(
+                            (-1) * math.log10(float(line[act_col[i]][1:]) * u_conv)
+                        )
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
                         print(" in line: " + " ".join(line))
@@ -873,7 +1067,13 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                         meas[compound_id]["pAct"].append("NA")
                     elif is_number(line[act_col[i]]):
                         if float(line[act_col[i]]) <= 0.0:
-                            print("Cannot interpret measured activity of "+line[act_col[i]]+units[i]+" for compound "+compound_id)
+                            print(
+                                "Cannot interpret measured activity of "
+                                + line[act_col[i]]
+                                + units[i]
+                                + " for compound "
+                                + compound_id
+                            )
                             print("Please fix. Exiting")
                             exit(0)
                         meas[compound_id]["qualifiers"].append("")
@@ -882,7 +1082,9 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                     elif line[act_col[i]][0] in (">", "<", "*") and is_number(line[act_col[i]][1:]):
                         meas[compound_id]["qualifiers"].append(line[act_col[i]][0])
                         meas[compound_id]["Act"].append(float(line[act_col[i]][1:]))
-                        meas[compound_id]["pAct"].append((-1) * math.log10(float(line[act_col[i]][1:])))
+                        meas[compound_id]["pAct"].append(
+                            (-1) * math.log10(float(line[act_col[i]][1:]))
+                        )
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
                         print(" in line: " + " ".join(line))
@@ -899,9 +1101,13 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                             if units[i] == "noconv":
                                 meas[compound_id]["Act"].append("")
                             else:
-                                meas[compound_id]["Act"].append(1E6 * 10 ** ((-1) * float(line[act_col[i]])))
+                                meas[compound_id]["Act"].append(
+                                    1e6 * 10 ** ((-1) * float(line[act_col[i]]))
+                                )
                         else:
-                            meas[compound_id]["Act"].append(1E6 * 10 ** ((-1) * float(line[act_col[i]])))
+                            meas[compound_id]["Act"].append(
+                                1e6 * 10 ** ((-1) * float(line[act_col[i]]))
+                            )
                         meas[compound_id]["pAct"].append(float(line[act_col[i]]))
                     elif line[act_col[i]][0] in (">", "<", "*") and is_number(line[act_col[i]][1:]):
                         meas[compound_id]["qualifiers"].append(line[act_col[i]][0])
@@ -909,9 +1115,13 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                             if units[i] == "noconv":
                                 meas[compound_id]["Act"].append("")
                             else:
-                                meas[compound_id]["Act"].append(1E6 * 10 ** ((-1) * float(line[act_col[i]][1:])))
+                                meas[compound_id]["Act"].append(
+                                    1e6 * 10 ** ((-1) * float(line[act_col[i]][1:]))
+                                )
                         else:
-                            meas[compound_id]["Act"].append(1E6 * 10 ** ((-1) * float(line[act_col[i]][1:])))
+                            meas[compound_id]["Act"].append(
+                                1e6 * 10 ** ((-1) * float(line[act_col[i]][1:]))
+                            )
                         meas[compound_id]["pAct"].append(float(line[act_col[i]][1:]))
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
@@ -930,17 +1140,17 @@ def clean_image_folder(meas, props, infile):
     Delete Cycle images where the properties have changed
     """
     print("Deleting Cycle images where property values changed since last run.")
-    
+
     image_files = os.listdir("images")
 
     try:
-        with open(infile[:infile.index(".")] + "_image_dat.pkl", "rb") as oldprops_file:
+        with open(infile[: infile.index(".")] + "_image_dat.pkl", "rb") as oldprops_file:
             oldprops = pickle.load(oldprops_file)
         remove_prop = {}
         for cid, a in meas.items():
             for idx, prp in enumerate(props):
                 if (cid, prp) in oldprops:
-                    if not "{:.3g}".format(a['pAct'][idx]) == oldprops[(cid, prp)]:
+                    if not "{:.3g}".format(a["pAct"][idx]) == oldprops[(cid, prp)]:
                         remove_prop[(cid, prp)] = True
 
         del_file = [False for i in image_files]
@@ -949,16 +1159,26 @@ def clean_image_folder(meas, props, infile):
                 if cid in fl and prp in fl:
                     del_file[idx] = True
     except:
-        print("Could not find the file with properties from the previous run ("
-              + infile[:infile.index(".")] + "_image_dat.pkl"+").")
+        print(
+            "Could not find the file with properties from the previous run ("
+            + infile[: infile.index(".")]
+            + "_image_dat.pkl"
+            + ")."
+        )
         print("All pictures will be redone.")
         del_file = [True for i in image_files]
 
-    print("Reusing " + str(len(del_file)-sum(del_file)) + " out of " + str(len(del_file))+" previous images.")
-    
+    print(
+        "Reusing "
+        + str(len(del_file) - sum(del_file))
+        + " out of "
+        + str(len(del_file))
+        + " previous images."
+    )
+
     for idx, delete in enumerate(del_file):
         if delete:
-            os.remove("images/"+image_files[idx])
+            os.remove("images/" + image_files[idx])
 
     return
 
@@ -972,13 +1192,13 @@ def write_propdata_dict(meas, props, infile):
     for cid, a in meas.items():
         for idx, prp in enumerate(props):
             try:
-                dat[(cid, prp)] = "{:.3g}".format(a['pAct'][idx])
+                dat[(cid, prp)] = "{:.3g}".format(a["pAct"][idx])
             except:
                 continue
-                
-    with open(infile[:infile.index(".")]+"_image_dat.pkl", "wb") as output_file:
+
+    with open(infile[: infile.index(".")] + "_image_dat.pkl", "wb") as output_file:
         pickle.dump(dat, output_file)
-        
+
     return
 
 
@@ -996,13 +1216,17 @@ def run_nonadd_calculation(run_control):
     - no_chiral(Boolean)
     - write_images(Boolean)
     """
-    meas, run_control.props, run_control.units = build_ligand_dictionary_from_infile(run_control.infile,
-                                                                                     run_control.props,
-                                                                                     run_control.units,
-                                                                                     run_control.delimiter,
-                                                                                     run_control.series_column)
+    meas, run_control.props, run_control.units = build_ligand_dictionary_from_infile(
+        run_control.infile,
+        run_control.props,
+        run_control.units,
+        run_control.delimiter,
+        run_control.series_column,
+    )
 
-    if run_control.update and not os.path.exists(run_control.infile[:run_control.infile.index(".")]+".fragments"):
+    if run_control.update and not os.path.exists(
+        run_control.infile[: run_control.infile.index(".")] + ".fragments"
+    ):
         print("Was not able to locate results from previous fragmentation.")
         print("Will redo all fragmentation.")
         run_control.update = False
@@ -1015,14 +1239,20 @@ def run_nonadd_calculation(run_control):
     circles = get_circles(neighs)
 
     if not run_control.outfile:
-        if os.path.dirname(run_control.infile) == '':
-            run_control.outfile = "Additivity_diffs_" + run_control.infile[:run_control.infile.index(".")]+".txt"
+        if os.path.dirname(run_control.infile) == "":
+            run_control.outfile = (
+                "Additivity_diffs_" + run_control.infile[: run_control.infile.index(".")] + ".txt"
+            )
         else:
-            run_control.outfile = os.path.dirname(run_control.infile) + '/' + "Additivity_diffs_"
-            run_control.outfile = run_control.outfile + run_control.infile.split("/")[-1][:run_control.infile.split("/")[-1].index(".")]+".txt"
+            run_control.outfile = os.path.dirname(run_control.infile) + "/" + "Additivity_diffs_"
+            run_control.outfile = (
+                run_control.outfile
+                + run_control.infile.split("/")[-1][: run_control.infile.split("/")[-1].index(".")]
+                + ".txt"
+            )
     else:
         if "." not in run_control.outfile:
-            run_control.outfile = run_control.outfile +".txt"
+            run_control.outfile = run_control.outfile + ".txt"
 
     if run_control.shorts:
         if len(run_control.shorts) == len(run_control.props):
@@ -1033,15 +1263,17 @@ def run_nonadd_calculation(run_control):
             clean_image_folder(meas, run_control.props, run_control.infile)
 
     write_propdata_dict(meas, run_control.props, run_control.infile)
-    write_circles_to_output(circles=circles,
-                            meas=meas,
-                            neighs=neighs,
-                            outfile=run_control.outfile,
-                            props=run_control.props,
-                            units=run_control.units,
-                            images=run_control.write_images,
-                            include_censored=run_control.include_censored,
-                            update=run_control.update,
-                            series_column=run_control.series_column)
+    write_circles_to_output(
+        circles=circles,
+        meas=meas,
+        neighs=neighs,
+        outfile=run_control.outfile,
+        props=run_control.props,
+        units=run_control.units,
+        images=run_control.write_images,
+        include_censored=run_control.include_censored,
+        update=run_control.update,
+        series_column=run_control.series_column,
+    )
 
     exit(0)
