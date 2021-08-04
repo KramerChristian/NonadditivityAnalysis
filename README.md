@@ -105,10 +105,10 @@ attempt to desalt the input.
 Since Nonadditivity analysis only makes sense on normally distributed data, the
 input activity data can be transformed depending on the input units. You can choose
 from "M", "mM", "uM", "nM", "pM", and "noconv". The 'xM' units will be transformed
-to pActivity wiht the corresponding factors. 'noconv' keeps the input as is and does
+to pActivity with the corresponding factors. 'noconv' keeps the input as is and does
 not do any transformation.
 
-For mulitplicate structures, only the first occurence will be kept.
+For multiplicate structures, only the first occurence will be kept.
 
 
 #### 2) Compute MMPs
