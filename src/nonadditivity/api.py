@@ -1,73 +1,49 @@
-# Nonadditivity Analysis
-#
-# Copyright (c) 2019, F. Hoffmann-La Roche Ltd.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-#
-#    * Redistributions of source code must retain the above copyright
-#      notice, this list of conditions and the following disclaimer.
-#    * Redistributions in binary form must reproduce the above
-#      copyright notice, this list of conditions and the following
-#      disclaimer in the documentation and/or other materials provided
-#      with the distribution.
-#    * Neither the name of F. Hoffmann-La Roche Ltd. nor the names of
-#      its contributors may be used to endorse or promote products
-#      derived from this software without specific prior written
-#      permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
+"""Nonadditivity Analysis.
 
-########################
-# BEFORE RUNNING THIS CODE
-#
-# This code uses other external codes. To make it run properly, you have to adjust
-# the paths below to the corresponding installations on your system.
+Copyright (c) 2019, F. Hoffmann-La Roche Ltd.
 
-import rdkit
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+     copyright notice, this list of conditions and the following
+     disclaimer in the documentation and/or other materials provided
+     with the distribution.
+   * Neither the name of F. Hoffmann-La Roche Ltd. nor the names of
+     its contributors may be used to endorse or promote products
+     derived from this software without specific prior written
+     permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+
+import math
 import os.path
-from rdkit import RDConfig
+import pickle
+import random
+import subprocess
 
-salt_defns = os.path.join(
-    RDConfig.RDDataDir, "Salts.txt"
-)  # replace if you have more specific definitions
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+from rdkit import Chem, Geometry, RDConfig
+from rdkit.Chem import AllChem, Descriptors, Draw, SaltRemover, rdFMCS
+from scipy import stats
+
 
 font_path = "arial.ttf"  # Only used in draw_pics, currently not supported
-
-########################
-
-import subprocess
-import math
-import pickle
-import argparse
-import random
-
-from rdkit import Chem
-from rdkit import Geometry
-from rdkit.Chem import AllChem
-from rdkit.Chem import Draw
-from rdkit.Chem import rdFMCS
-from rdkit.Chem import SaltRemover
-from rdkit.Chem import Descriptors
-
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
-
-from scipy import stats
-import numpy as np
 
 
 def numpy_std(values):
@@ -966,8 +942,11 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
             print("Exiting.")
             exit(0)
 
-            ########
             # Assemble data
+        # Assemble data
+        salt_defns = os.path.join(
+            RDConfig.RDDataDir, "Salts.txt"
+        )  # replace if you have more specific definitions
         remover = SaltRemover.SaltRemover(defnFilename=salt_defns)
         unit_conv = {"M": 1.0, "mM": 1e-3, "uM": 1e-6, "nM": 1e-9, "pM": 1e-12, "noconv": 1.0}
         meas = dict()
