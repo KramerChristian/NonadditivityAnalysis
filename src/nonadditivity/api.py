@@ -845,21 +845,21 @@ def read_raw_mmps(infile):
     return mmps
 
 
-def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_column):
+def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, series_column=None):
     """
     Read input file and assemble dictionaries
     """
 
     error_files = infile[: infile.index(".")] + "_problem_smiles.smi"
 
+    if delimiter == "comma" or delimiter is None:
+        delimiter = ","
     if delimiter == "tab":
         delimiter = "\t"
     elif delimiter == "space":
         delimiter = " "
     elif delimiter == "semicolon":
         delimiter = ";"
-    else:
-        delimiter = ","
 
     with open(infile, "r") as f, open(error_files, "w") as g:
         ########
