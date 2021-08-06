@@ -885,9 +885,9 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
         else:
             try:
                 act_col = [header.index(i) for i in props]
-            except:
-                print("Could not find all given Activity columns in file header. Exiting")
-                exit(0)
+            except Exception:
+                print("Could not find all given Activity columns in file header.")
+                raise
 
         ########
         # Figure out conversion of target columns
@@ -939,10 +939,9 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
         if id_col == smi_col or id_col in act_col or smi_col in act_col:
             print("Was not able to cleanly distinguish ID, SMILES, and activity columns.")
             print("Please assign unambiguous names (no overlap in 'SMILES', 'ID', 'SRN'.")
-            print("Exiting.")
-            exit(0)
+            raise RuntimeError
 
-            # Assemble data
+        ########
         # Assemble data
         salt_defns = os.path.join(
             RDConfig.RDDataDir, "Salts.txt"
@@ -959,14 +958,13 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
             compound_id = line[id_col]
             if compound_id in meas:
                 print("Two or more entries for the same identifier: " + compound_id)
-                print("Please fix. Exiting")
-                exit(0)
+                print("Please fix.")
+                raise RuntimeError
             smiles = line[smi_col].replace("\\\\", "\\")
             if len(line) < len(props) + 2:
                 print("Could not properly read line:")
                 print(line)
-                print("Exiting...")
-                exit(0)
+                raise RuntimeError
             try:
                 mol = Chem.MolFromSmiles(smiles)
                 res = remover.StripMol(mol)  # Remove Salts
@@ -1021,8 +1019,8 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                                 + " for compound "
                                 + compound_id
                             )
-                            print("Please fix. Exiting")
-                            exit(0)
+                            print("Please fix.")
+                            raise RuntimeError
                         meas[compound_id]["qualifiers"].append("")
                         meas[compound_id]["Act"].append(float(line[act_col[i]]))
                         meas[compound_id]["pAct"].append(
@@ -1037,8 +1035,8 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
                         print(" in line: " + " ".join(line))
-                        print("Please fix. Exiting")
-                        exit(0)
+                        print("Please fix.")
+                        raise RuntimeError
                 elif log10[i]:
                     if line[act_col[i]] in ["NA", "", "No Value"]:
                         meas[compound_id]["qualifiers"].append("")
@@ -1053,8 +1051,8 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                                 + " for compound "
                                 + compound_id
                             )
-                            print("Please fix. Exiting")
-                            exit(0)
+                            print("Please fix.")
+                            raise RuntimeError
                         meas[compound_id]["qualifiers"].append("")
                         meas[compound_id]["Act"].append(float(line[act_col[i]]))
                         meas[compound_id]["pAct"].append(math.log10(float(line[act_col[i]])))
@@ -1067,8 +1065,8 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
                         print(" in line: " + " ".join(line))
-                        print("Please fix. Exiting")
-                        exit(0)
+                        print("Please fix.")
+                        raise RuntimeError
                 else:
                     if line[act_col[i]] in ["NA", "", "No Value"]:
                         meas[compound_id]["qualifiers"].append("")
@@ -1105,8 +1103,8 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter, series_
                     else:
                         print("Did not recognize number " + str(line[act_col[i]]))
                         print(" in line: " + " ".join(line))
-                        print("Please fix. Exiting")
-                        exit(0)
+                        print("Please fix.")
+                        raise RuntimeError
 
     if len(units) == 0:
         units = ["noconv" for i in props]
@@ -1254,5 +1252,3 @@ def run_nonadd_calculation(run_control):
         update=run_control.update,
         series_column=run_control.series_column,
     )
-
-    exit(0)
