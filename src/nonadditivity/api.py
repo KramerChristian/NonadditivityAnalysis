@@ -830,7 +830,7 @@ def read_raw_mmps(infile):
     return mmps
 
 
-def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, series_column=None):
+def build_ligand_dictionary_from_infile(infile, props, units, *, delimiter=None, series_column=None):
     """
     Read input file and assemble dictionaries
     """
@@ -1157,7 +1157,7 @@ def write_propdata_dict(meas, props, infile):
         pickle.dump(dat, output_file)
 
 
-def run_nonadd_calculation(run_control):
+def run_nonadd_calculation(args):
     """
     Main routine to run the Nonadditivity calculations.
     run_control needs to have the following attributes:
@@ -1171,62 +1171,93 @@ def run_nonadd_calculation(run_control):
     - no_chiral(Boolean)
     - write_images(Boolean)
     """
-    meas, run_control.props, run_control.units = build_ligand_dictionary_from_infile(
-        run_control.infile,
-        run_control.props,
-        run_control.units,
-        run_control.delimiter,
-        run_control.series_column,
+    return run_nonadd_calculation_helper(
+        infile=args.infile,
+        units=args.units,
+        props=args.props,
+        update=args.update,
+        max_heavy=args.max_heavy,
+        no_chiral=args.no_chiral,
+        outfile=args.outfile,
+        shorts=args.shorts,
+        write_images=args.write_images,
+        include_censored=args.include_censored,
+        delimiter=args.delimiter,
+        series_column=args.series_column,
     )
 
-    if run_control.update and not os.path.exists(
-        run_control.infile[: run_control.infile.index(".")] + ".fragments"
+
+def run_nonadd_calculation_helper(
+    *,
+    infile,
+    units,
+    props,
+    update,
+    max_heavy,
+    no_chiral,
+    outfile,
+    shorts,
+    write_images,
+    include_censored,
+    delimiter=None,
+    series_column=None,
+):
+    meas, props, units = build_ligand_dictionary_from_infile(
+        infile=infile,
+        props=props,
+        units=units,
+        delimiter=delimiter,
+        series_column=series_column,
+    )
+
+    if update and not os.path.exists(
+        infile[: infile.index(".")] + ".fragments"
     ):
         print("Was not able to locate results from previous fragmentation.")
         print("Will redo all fragmentation.")
-        run_control.update = False
+        update = False
 
-    write_smiles_id_file(meas, run_control.infile, run_control.max_heavy)
-    calc_raw_MMPs(run_control.infile, run_control.update)
+    write_smiles_id_file(meas, infile, max_heavy)
+    calc_raw_MMPs(infile, update)
 
-    mmps = read_raw_mmps(run_control.infile)
-    neighs = build_neighbor_dictionary(mmps, no_chiral=run_control.no_chiral)
+    mmps = read_raw_mmps(infile)
+    neighs = build_neighbor_dictionary(mmps, no_chiral=no_chiral)
     circles = get_circles(neighs)
 
-    if not run_control.outfile:
-        if os.path.dirname(run_control.infile) == "":
-            run_control.outfile = (
-                "Additivity_diffs_" + run_control.infile[: run_control.infile.index(".")] + ".txt"
+    if not outfile:
+        if os.path.dirname(infile) == "":
+            outfile = (
+                "Additivity_diffs_" + infile[: infile.index(".")] + ".txt"
             )
         else:
-            run_control.outfile = os.path.dirname(run_control.infile) + "/" + "Additivity_diffs_"
-            run_control.outfile = (
-                run_control.outfile
-                + run_control.infile.split("/")[-1][: run_control.infile.split("/")[-1].index(".")]
+            outfile = os.path.dirname(infile) + "/" + "Additivity_diffs_"
+            outfile = (
+                outfile
+                + infile.split("/")[-1][: infile.split("/")[-1].index(".")]
                 + ".txt"
             )
     else:
-        if "." not in run_control.outfile:
-            run_control.outfile = run_control.outfile + ".txt"
+        if "." not in outfile:
+            outfile = outfile + ".txt"
 
-    if run_control.shorts:
-        if len(run_control.shorts) == len(run_control.props):
-            run_control.props = run_control.shorts
+    if shorts:
+        if len(shorts) == len(props):
+            props = shorts
 
-    if run_control.update and run_control.write_images:
+    if update and write_images:
         if os.path.isdir("images"):
-            clean_image_folder(meas, run_control.props, run_control.infile)
+            clean_image_folder(meas, props, infile)
 
-    write_propdata_dict(meas, run_control.props, run_control.infile)
+    write_propdata_dict(meas, props, infile)
     write_circles_to_output(
         circles=circles,
         meas=meas,
         neighs=neighs,
-        outfile=run_control.outfile,
-        props=run_control.props,
-        units=run_control.units,
-        images=run_control.write_images,
-        include_censored=run_control.include_censored,
-        update=run_control.update,
-        series_column=run_control.series_column,
+        outfile=outfile,
+        props=props,
+        units=units,
+        images=write_images,
+        include_censored=include_censored,
+        update=update,
+        series_column=series_column,
     )
