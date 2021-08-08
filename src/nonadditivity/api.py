@@ -45,6 +45,8 @@ from scipy import stats
 
 font_path = "arial.ttf"  # Only used in draw_pics, currently not supported
 
+unit_conv = {"M": 1.0, "mM": 1e-3, "uM": 1e-6, "nM": 1e-9, "pM": 1e-12, "noconv": 1.0}
+
 
 def numpy_std(values):
     return np.std(values)
@@ -58,7 +60,6 @@ def mad_std(values):
     This is a fast and simple robust SD estimator. However, it may have problems
     for small datasets where the average is not well estimated.
     """
-
     median = np.median(values)
     ad = np.abs(values - median)
     mad = np.median(ad)
@@ -78,7 +79,6 @@ def Sn_MedMed_std(values):
     Journal of the American Statistical Association, American Statistical Association,
     88 (424): 1273–1283, doi:10.2307/2291267, JSTOR 2291267
     """
-
     pairwise_medians = np.empty(len(values))
 
     for idx, i_value in enumerate(values):
@@ -158,7 +158,7 @@ def get_circles(neighs):
     trans = {}
     for key, dat in neighs.items():
         for partner, T1 in dat:
-            trans[(key, partner)] = T1
+            trans[key, partner] = T1
 
     trans_pairs = {}
     for pair, T1 in trans.items():
@@ -171,7 +171,7 @@ def get_circles(neighs):
         for C2 in neighbors[C1]:
             if not still_in[C2]:
                 continue
-            for C3, C4 in trans_pairs[trans[(C1, C2)]]:
+            for C3, C4 in trans_pairs[trans[C1, C2]]:
                 if not still_in_2[C3]:
                     continue
                 if not still_in_2[C4]:
@@ -184,7 +184,7 @@ def get_circles(neighs):
                     continue
                 if C1 == C4:
                     continue
-                if trans[(C1, C3)] == trans[(C2, C4)]:
+                if trans[C1, C3] == trans[C2, C4]:
                     circles.append((C1, C2, C4, C3))
             still_in_2[C2] = False
         still_in[C1] = False
@@ -493,7 +493,7 @@ def write_circles_to_output(
                         nonadd_cnt_pure = len(values_pure)
                         nonadd_pure = sum(values_pure) / nonadd_cnt_pure
                         nonadd_sd_pure = math.sqrt(
-                            sum([(i - nonadd_pure) ** 2 for i in values_pure]) / nonadd_cnt_pure
+                            sum((i - nonadd_pure) ** 2 for i in values_pure) / nonadd_cnt_pure
                         )
                         outline = outline + [
                             "{:.2g}".format(nonadd_pure),
@@ -508,7 +508,7 @@ def write_circles_to_output(
                         nonadd_cnt_mixed = len(values_mixed)
                         nonadd_mixed = sum(values_mixed) / nonadd_cnt_mixed
                         nonadd_sd_mixed = math.sqrt(
-                            sum([(i - nonadd_mixed) ** 2 for i in values_mixed]) / nonadd_cnt_mixed
+                            sum((i - nonadd_mixed) ** 2 for i in values_mixed) / nonadd_cnt_mixed
                         )
                         outline = outline + [
                             "{:.2g}".format(nonadd_mixed),
@@ -525,7 +525,7 @@ def write_circles_to_output(
                         continue
                     nonadd_cnt = len(values)
                     nonadd = sum(values) / nonadd_cnt
-                    nonadd_sd = math.sqrt(sum([(i - nonadd) ** 2 for i in values]) / nonadd_cnt)
+                    nonadd_sd = math.sqrt(sum((i - nonadd) ** 2 for i in values) / nonadd_cnt)
                     outline = "\t".join(
                         [
                             ID,
@@ -544,14 +544,11 @@ def write_circles_to_output(
             for line in c2c_lines:
                 h.write(line)
 
-    return
-
 
 def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mcss_tot, image_file):
     """
     Draw Nonadditivity Circle to Image file
     """
-
     cpds = [Chem.MolFromSmiles(i) for i in smiles]
 
     #########
@@ -758,8 +755,6 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
 
     new_im.save(image_file)
 
-    return
-
 
 def is_number(s):
     try:
@@ -773,23 +768,17 @@ def write_smiles_id_file(meas, infile, max_heavy):
     """
     Format dataset for MMP analysis and write to temp file
     """
-
     smifile = infile[: infile.index(".")] + "_ligands.smi"
-    f = open(smifile, "w")
-
-    for entry in meas.keys():
-        try:
-            mol = Chem.MolFromSmiles(meas[entry]["smiles"])
-            if mol.GetNumHeavyAtoms() > max_heavy:
+    with open(smifile, "w") as f:
+        for entry in meas.keys():
+            try:
+                mol = Chem.MolFromSmiles(meas[entry]["smiles"])
+                if mol.GetNumHeavyAtoms() > max_heavy:
+                    continue
+                f.write(meas[entry]["smiles"] + "\t" + entry + "\n")
+            except:
+                print("Skipping compound", entry)
                 continue
-            f.write(meas[entry]["smiles"] + "\t" + entry + "\n")
-        except:
-            print("Skipping compound", entry)
-            continue
-
-    f.close()
-
-    return
 
 
 def calc_raw_MMPs(infile, update):
@@ -830,18 +819,14 @@ def calc_raw_MMPs(infile, update):
     sp_call = sp_call + " --out csv --symmetric --output " + mmp_outfile + " " + fragfile
     subprocess.call(sp_call, shell=True)  # Fragment_matching & Indexing
 
-    return
-
 
 def read_raw_mmps(infile):
     """
     Read raw precalculated MMPs
     """
     mmp_outfile = infile[: infile.index(".")] + "_mmp_raw.csv"
-    f = open(mmp_outfile, "r")
-    mmps = f.readlines()
-    f.close()
-
+    with open(mmp_outfile, "r") as f:
+        mmps = f.readlines()
     return mmps
 
 
@@ -849,7 +834,6 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, se
     """
     Read input file and assemble dictionaries
     """
-
     error_files = infile[: infile.index(".")] + "_problem_smiles.smi"
 
     if delimiter == "comma" or delimiter is None:
@@ -897,7 +881,7 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, se
             False if any(log_flag.lower() in target.lower() for log_flag in log_flags) else True
             for target in props
         ]
-        log10 = [False for target in props]
+        log10 = [False for _ in props]
 
         #########
         # Write Identified Columns to STDOUT
@@ -947,7 +931,6 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, se
             RDConfig.RDDataDir, "Salts.txt"
         )  # replace if you have more specific definitions
         remover = SaltRemover.SaltRemover(defnFilename=salt_defns)
-        unit_conv = {"M": 1.0, "mM": 1e-3, "uM": 1e-6, "nM": 1e-9, "pM": 1e-12, "noconv": 1.0}
         meas = dict()
         smiles_registered = dict()
 
@@ -1107,7 +1090,7 @@ def build_ligand_dictionary_from_infile(infile, props, units, delimiter=None, se
                         raise RuntimeError
 
     if len(units) == 0:
-        units = ["noconv" for i in props]
+        units = ["noconv" for _ in props]
 
     return meas, props, units
 
@@ -1127,10 +1110,10 @@ def clean_image_folder(meas, props, infile):
         for cid, a in meas.items():
             for idx, prp in enumerate(props):
                 if (cid, prp) in oldprops:
-                    if not "{:.3g}".format(a["pAct"][idx]) == oldprops[(cid, prp)]:
-                        remove_prop[(cid, prp)] = True
+                    if not "{:.3g}".format(a["pAct"][idx]) == oldprops[cid, prp]:
+                        remove_prop[cid, prp] = True
 
-        del_file = [False for i in image_files]
+        del_file = [False for _ in image_files]
         for cid, prp in iter(remove_prop.keys()):
             for idx, fl in enumerate(image_files):
                 if cid in fl and prp in fl:
@@ -1143,7 +1126,7 @@ def clean_image_folder(meas, props, infile):
             + ")."
         )
         print("All pictures will be redone.")
-        del_file = [True for i in image_files]
+        del_file = [True for _ in image_files]
 
     print(
         "Reusing "
@@ -1157,26 +1140,21 @@ def clean_image_folder(meas, props, infile):
         if delete:
             os.remove("images/" + image_files[idx])
 
-    return
-
 
 def write_propdata_dict(meas, props, infile):
     """
     Store property values for future image update
     """
-
     dat = {}
     for cid, a in meas.items():
         for idx, prp in enumerate(props):
             try:
-                dat[(cid, prp)] = "{:.3g}".format(a["pAct"][idx])
+                dat[cid, prp] = "{:.3g}".format(a["pAct"][idx])
             except:
                 continue
 
     with open(infile[: infile.index(".")] + "_image_dat.pkl", "wb") as output_file:
         pickle.dump(dat, output_file)
-
-    return
 
 
 def run_nonadd_calculation(run_control):
