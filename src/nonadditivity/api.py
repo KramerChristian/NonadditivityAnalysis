@@ -35,13 +35,15 @@ import os.path
 import pickle
 import random
 import subprocess
+from pathlib import Path
+from typing import List, Optional, Union
 
 import numpy as np
+import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 from rdkit import Chem, Geometry, RDConfig
 from rdkit.Chem import AllChem, Descriptors, Draw, SaltRemover, rdFMCS
 from scipy import stats
-
 
 font_path = "arial.ttf"  # Only used in draw_pics, currently not supported
 
@@ -196,13 +198,16 @@ def write_circles_to_output(
     circles,
     meas,
     neighs,
-    outfile,
     props,
     units,
     images=False,
     include_censored=False,
     update=False,
     series_column=None,
+    *,
+    outfile: str,
+    nonadd_percompound_file: str,
+    circle_to_cpd_file: str,
 ):
     """
     Get Diffs and write to output
@@ -236,7 +241,6 @@ def write_circles_to_output(
 
     header = header + "Circle_ID\tTheo_Quantile\n"
 
-    nonadd_percompound_file = outfile[: outfile.index(".")] + "_perCompound.txt"
     napc_header = "Compound_ID\tSMILES\tSeries\tProperty\tOperator\tMeasured\t"
     if series_column:
         napc_header = napc_header + "Nonadd_pure\tnOccurence_pure\tNonadd_SD_pure\t"
@@ -244,7 +248,6 @@ def write_circles_to_output(
     else:
         napc_header = napc_header + "Nonadd_pC\tnOccurence\tNonadd_SD\n"
 
-    circle_to_cpd_file = outfile[: outfile.index(".")] + "_c2c.txt"
     c2c_header = "Circle_ID\tCompound_ID\n"
 
     with open(outfile, "w") as f, open(nonadd_percompound_file, "w") as g, open(
@@ -764,11 +767,10 @@ def is_number(s):
         return False
 
 
-def write_smiles_id_file(meas, infile, max_heavy):
+def write_smiles_id_file(meas, max_heavy, *, smifile):
     """
     Format dataset for MMP analysis and write to temp file
     """
-    smifile = infile[: infile.index(".")] + "_ligands.smi"
     with open(smifile, "w") as f:
         for entry in meas.keys():
             try:
@@ -781,17 +783,13 @@ def write_smiles_id_file(meas, infile, max_heavy):
                 continue
 
 
-def calc_raw_MMPs(infile, update):
+def calc_raw_MMPs(*, update, fragfile, mmp_path, smifile):
     """
     Generate MMP Indexing and Matching using mmpdb
     """
-    smifile = infile[: infile.index(".")] + "_ligands.smi"
-    fragfile = infile[: infile.index(".")] + ".fragments"
-    mmp_outfile = infile[: infile.index(".")] + "_mmp_raw.csv"
-
     # TODO switch system calls to just importing the python code and using it directly
     if update:
-        print("Updating MMP Fragments for " + infile)
+        print("Updating MMP Fragments")
         sp_call = (
             "python -m mmpdblib fragment "
             + " --num-jobs 20 --delimiter tab --cache "
@@ -802,7 +800,7 @@ def calc_raw_MMPs(infile, update):
             + smifile
         )
     else:
-        print("Generating MMP Fragments for " + infile)
+        print("Generating MMP Fragments")
         sp_call = (
             "python -m mmpdblib fragment"
             + " --num-jobs 20 -i smi --delimiter tab "
@@ -814,38 +812,43 @@ def calc_raw_MMPs(infile, update):
 
     subprocess.call(sp_call, shell=True)  # Fragmentation
 
-    print("Indexing MMP Fragments for " + infile)
+    print("Indexing MMP Fragments")
     sp_call = "python -m mmpdblib index"
-    sp_call = sp_call + " --out csv --symmetric --output " + mmp_outfile + " " + fragfile
+    sp_call = sp_call + " --out csv --symmetric --output " + mmp_path + " " + fragfile
     subprocess.call(sp_call, shell=True)  # Fragment_matching & Indexing
 
 
-def read_raw_mmps(infile):
+def read_raw_mmps(path):
     """
     Read raw precalculated MMPs
     """
-    mmp_outfile = infile[: infile.index(".")] + "_mmp_raw.csv"
-    with open(mmp_outfile, "r") as f:
+    with open(path, "r") as f:
         mmps = f.readlines()
     return mmps
 
 
-def build_ligand_dictionary_from_infile(infile, props, units, *, delimiter=None, series_column=None):
+def build_ligand_dictionary_from_infile(
+    infile: str,
+    error_path: str,
+    props,
+    units,
+    *,
+    delimiter=None,
+    series_column=None,
+):
     """
     Read input file and assemble dictionaries
     """
-    error_files = infile[: infile.index(".")] + "_problem_smiles.smi"
-
-    if delimiter == "comma" or delimiter is None:
+    if delimiter == "comma":
         delimiter = ","
-    if delimiter == "tab":
+    if delimiter == "tab" or delimiter is None:
         delimiter = "\t"
     elif delimiter == "space":
         delimiter = " "
     elif delimiter == "semicolon":
         delimiter = ";"
 
-    with open(infile, "r") as f, open(error_files, "w") as g:
+    with open(infile, "r") as f, open(error_path, "w") as g:
         ########
         # Process header
         header = [i.strip('"') for i in f.readline().rstrip("\n").split(delimiter)]
@@ -1095,7 +1098,7 @@ def build_ligand_dictionary_from_infile(infile, props, units, *, delimiter=None,
     return meas, props, units
 
 
-def clean_image_folder(meas, props, infile):
+def clean_image_folder(meas, props, *, image_dat_path):
     """
     Delete Cycle images where the properties have changed
     """
@@ -1104,7 +1107,7 @@ def clean_image_folder(meas, props, infile):
     image_files = os.listdir("images")
 
     try:
-        with open(infile[: infile.index(".")] + "_image_dat.pkl", "rb") as oldprops_file:
+        with open(image_dat_path, "rb") as oldprops_file:
             oldprops = pickle.load(oldprops_file)
         remove_prop = {}
         for cid, a in meas.items():
@@ -1119,12 +1122,7 @@ def clean_image_folder(meas, props, infile):
                 if cid in fl and prp in fl:
                     del_file[idx] = True
     except:
-        print(
-            "Could not find the file with properties from the previous run ("
-            + infile[: infile.index(".")]
-            + "_image_dat.pkl"
-            + ")."
-        )
+        print(f"Could not find the file with properties from the previous run ({image_dat_path}).")
         print("All pictures will be redone.")
         del_file = [True for _ in image_files]
 
@@ -1141,7 +1139,7 @@ def clean_image_folder(meas, props, infile):
             os.remove("images/" + image_files[idx])
 
 
-def write_propdata_dict(meas, props, infile):
+def write_propdata_dict(meas, props, *, image_dat_path):
     """
     Store property values for future image update
     """
@@ -1153,7 +1151,7 @@ def write_propdata_dict(meas, props, infile):
             except:
                 continue
 
-    with open(infile[: infile.index(".")] + "_image_dat.pkl", "wb") as output_file:
+    with open(image_dat_path, "wb") as output_file:
         pickle.dump(dat, output_file)
 
 
@@ -1178,7 +1176,7 @@ def run_nonadd_calculation(args):
         update=args.update,
         max_heavy=args.max_heavy,
         no_chiral=args.no_chiral,
-        outfile=args.outfile,
+        directory=args.outfile,
         shorts=args.shorts,
         write_images=args.write_images,
         include_censored=args.include_censored,
@@ -1189,56 +1187,57 @@ def run_nonadd_calculation(args):
 
 def run_nonadd_calculation_helper(
     *,
-    infile,
-    units,
-    props,
-    update,
-    max_heavy,
-    no_chiral,
-    outfile,
-    shorts,
-    write_images,
-    include_censored,
-    delimiter=None,
-    series_column=None,
+    infile: Union[str, Path],
+    directory: Optional[str] = None,
+    units: Optional[List[str]] = None,
+    props: Optional[List[str]] = None,
+    update: bool = False,
+    max_heavy: int = 70,
+    no_chiral: bool = False,
+    shorts: Optional[List[str]] = None,
+    write_images: bool = False,
+    include_censored: bool = False,
+    delimiter: Optional[str] = None,
+    series_column: Optional[List[str]] = None,
 ):
+    if directory is None:
+        directory = os.path.dirname(infile)
+    error_path = os.path.join(directory, "problem_smiles.smi")
+    fragment_path = os.path.join(directory, "fragments.jsonl")
+    smi_path = os.path.join(directory, "ligands.smi")
+    mmp_path = os.path.join(directory, "mmp_raw.tsv")
+    image_dat_path = os.path.join(directory, "image_dat.pkl")
+    outfile = os.path.join(directory, "NAA_output.tsv")
+    nonadd_percompound_file = os.path.join(directory, "perCompound.tsv")
+    circle_to_cpd_file = os.path.join(directory, "c2c.tsv")
+
+    if props is None:
+        props = []
+    if shorts is None:
+        shorts = []
+    if series_column is None:
+        series_column = []
+
     meas, props, units = build_ligand_dictionary_from_infile(
         infile=infile,
+        error_path=error_path,
         props=props,
         units=units,
         delimiter=delimiter,
         series_column=series_column,
     )
 
-    if update and not os.path.exists(
-        infile[: infile.index(".")] + ".fragments"
-    ):
+    if update and not os.path.exists(fragment_path):
         print("Was not able to locate results from previous fragmentation.")
         print("Will redo all fragmentation.")
         update = False
 
-    write_smiles_id_file(meas, infile, max_heavy)
-    calc_raw_MMPs(infile, update)
+    write_smiles_id_file(meas=meas, max_heavy=max_heavy, smifile=smi_path)
+    calc_raw_MMPs(update=update, fragfile=fragment_path, smifile=smi_path, mmp_path=mmp_path)
 
-    mmps = read_raw_mmps(infile)
+    mmps = read_raw_mmps(path=mmp_path)
     neighs = build_neighbor_dictionary(mmps, no_chiral=no_chiral)
     circles = get_circles(neighs)
-
-    if not outfile:
-        if os.path.dirname(infile) == "":
-            outfile = (
-                "Additivity_diffs_" + infile[: infile.index(".")] + ".txt"
-            )
-        else:
-            outfile = os.path.dirname(infile) + "/" + "Additivity_diffs_"
-            outfile = (
-                outfile
-                + infile.split("/")[-1][: infile.split("/")[-1].index(".")]
-                + ".txt"
-            )
-    else:
-        if "." not in outfile:
-            outfile = outfile + ".txt"
 
     if shorts:
         if len(shorts) == len(props):
@@ -1246,9 +1245,9 @@ def run_nonadd_calculation_helper(
 
     if update and write_images:
         if os.path.isdir("images"):
-            clean_image_folder(meas, props, infile)
+            clean_image_folder(meas, props, image_dat_path=image_dat_path)
 
-    write_propdata_dict(meas, props, infile)
+    write_propdata_dict(meas, props, image_dat_path=image_dat_path)
     write_circles_to_output(
         circles=circles,
         meas=meas,
@@ -1260,4 +1259,12 @@ def run_nonadd_calculation_helper(
         include_censored=include_censored,
         update=update,
         series_column=series_column,
+        nonadd_percompound_file=nonadd_percompound_file,
+        circle_to_cpd_file=circle_to_cpd_file,
+    )
+
+    return (
+        pd.read_csv(outfile, sep="\t"),
+        pd.read_csv(nonadd_percompound_file, sep="\t"),
+        pd.read_csv(circle_to_cpd_file, sep="\t"),
     )
