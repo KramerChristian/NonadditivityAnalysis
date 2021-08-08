@@ -40,12 +40,11 @@ from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from rdkit import Chem, Geometry, RDConfig
 from rdkit.Chem import AllChem, Descriptors, Draw, SaltRemover, rdFMCS
 from scipy import stats
-
-font_path = "arial.ttf"  # Only used in draw_pics, currently not supported
+from tqdm import tqdm
 
 unit_conv = {"M": 1.0, "mM": 1e-3, "uM": 1e-6, "nM": 1e-9, "pM": 1e-12, "noconv": 1.0}
 
@@ -205,6 +204,7 @@ def write_circles_to_output(
     update=False,
     series_column=None,
     *,
+    images_dir,
     outfile: str,
     nonadd_percompound_file: str,
     circle_to_cpd_file: str,
@@ -229,8 +229,7 @@ def write_circles_to_output(
     header = header + "Nonadditivity\t"
     if images:
         header = header + "Circle_image\t"
-        if not os.path.isdir("images"):
-            os.mkdir("images")
+        os.makedirs(images_dir, exist_ok=True)
         cpds = [Chem.MolFromSmiles(i["smiles"]) for i in meas.values()]
         mcss_tot = rdFMCS.FindMCS(cpds, completeRingsOnly=True, timeout=60)
         if mcss_tot.numAtoms < 7:
@@ -270,7 +269,7 @@ def write_circles_to_output(
 
             print("for property: ", target)
 
-            for circle_idx, cpds in enumerate(circles):
+            for circle_idx, cpds in enumerate(tqdm(circles, desc="Output")):
                 ############
                 # 1st: Randomly reorder circles
                 min_idx = random.choice(
@@ -372,8 +371,9 @@ def write_circles_to_output(
                             nonadd_percompound[cpd] = [sign_switch * nonadd]
 
                 if images:
-                    image_file = "_".join(
-                        ["images/AddCyc", target] + list(circles[circle_idx]) + [".png"]
+                    image_file = os.path.join(
+                        images_dir,
+                        "_".join(["AddCyc", target] + list(circles[circle_idx]) + [".png"]),
                     )
                     line = line + image_file + "\t"
                     if update and os.path.exists(image_file):
@@ -671,15 +671,12 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
         )
 
         draw = ImageDraw.Draw(new_im)
-        font = ImageFont.truetype(font_path, 14)
-        draw.text((260, 330), "Nonadditivity: " + nonadd, fill=(0, 0, 0, 0), font=font)
+        draw.text((260, 330), "Nonadditivity: " + nonadd, fill=(0, 0, 0, 0))
 
-        font = ImageFont.truetype(font_path, 10)
         draw.text(
             (10, 650),
             "[uM]  (-log10[M])  Activity in Assay: " + target,
             fill=(0, 0, 0, 0),
-            font=font,
         )
     else:
         new_im.paste(
@@ -708,11 +705,9 @@ def draw_image(ids, smiles, tsmarts, pActs, Acts, qualifiers, nonadd, target, mc
         )
 
         draw = ImageDraw.Draw(new_im)
-        font = ImageFont.truetype(font_path, 14)
-        draw.text((260, 330), "Nonadditivity: " + nonadd, fill=(0, 0, 0, 0), font=font)
+        draw.text((260, 330), "Nonadditivity: " + nonadd, fill=(0, 0, 0, 0))
 
-        font = ImageFont.truetype(font_path, 10)
-        draw.text((10, 650), "Activity in Assay: " + target, fill=(0, 0, 0, 0), font=font)
+        draw.text((10, 650), "Activity in Assay: " + target, fill=(0, 0, 0, 0))
 
     # Draw Arrows
     draw.line((300, 150, 350, 150), fill=0, width=2)
@@ -1098,13 +1093,13 @@ def build_ligand_dictionary_from_infile(
     return meas, props, units
 
 
-def clean_image_folder(meas, props, *, image_dat_path):
+def clean_image_folder(meas, props, *, image_dir, image_dat_path):
     """
     Delete Cycle images where the properties have changed
     """
     print("Deleting Cycle images where property values changed since last run.")
 
-    image_files = os.listdir("images")
+    image_files = os.listdir(image_dir)
 
     try:
         with open(image_dat_path, "rb") as oldprops_file:
@@ -1136,7 +1131,7 @@ def clean_image_folder(meas, props, *, image_dat_path):
 
     for idx, delete in enumerate(del_file):
         if delete:
-            os.remove("images/" + image_files[idx])
+            os.remove(os.path.join(image_dir, image_files[idx]))
 
 
 def write_propdata_dict(meas, props, *, image_dat_path):
@@ -1210,6 +1205,7 @@ def run_nonadd_calculation_helper(
     outfile = os.path.join(directory, "NAA_output.tsv")
     nonadd_percompound_file = os.path.join(directory, "perCompound.tsv")
     circle_to_cpd_file = os.path.join(directory, "c2c.tsv")
+    images_dir = os.path.join(directory, "images")
 
     if props is None:
         props = []
@@ -1244,8 +1240,8 @@ def run_nonadd_calculation_helper(
             props = shorts
 
     if update and write_images:
-        if os.path.isdir("images"):
-            clean_image_folder(meas, props, image_dat_path=image_dat_path)
+        if os.path.isdir(images_dir):
+            clean_image_folder(meas, props, image_dir=images_dir, image_dat_path=image_dat_path)
 
     write_propdata_dict(meas, props, image_dat_path=image_dat_path)
     write_circles_to_output(
@@ -1258,6 +1254,7 @@ def run_nonadd_calculation_helper(
         images=write_images,
         include_censored=include_censored,
         update=update,
+        images_dir=images_dir,
         series_column=series_column,
         nonadd_percompound_file=nonadd_percompound_file,
         circle_to_cpd_file=circle_to_cpd_file,
