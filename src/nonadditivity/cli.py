@@ -48,7 +48,7 @@ def main():
         action="store_true",
         help="Include Circles where one out of four compounds has a censored value",
     )
-    parser.add_argument("-out", default=None, dest="outfile", help="Output file name")
+    parser.add_argument("-out", default=None, dest="directory", help="Output directory name")
     parser.add_argument(
         "-series_column", default=None, help="Column that identifies subseries within the dataset"
     )

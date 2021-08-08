@@ -1171,7 +1171,7 @@ def run_nonadd_calculation(args):
         update=args.update,
         max_heavy=args.max_heavy,
         no_chiral=args.no_chiral,
-        directory=args.outfile,
+        directory=args.directory,
         shorts=args.shorts,
         write_images=args.write_images,
         include_censored=args.include_censored,
